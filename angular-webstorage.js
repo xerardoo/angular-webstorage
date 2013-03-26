@@ -17,8 +17,8 @@ storage.value('cachedJSON', "");
 //storage.value('cachedStorage', undefined);
 storage.run(function(WebStorage, scopes, cachedStorage){
   // Example call for run method, maybe I can clean the store here o load it.
-  if (cachedStorage = WebStorage.supported())
-    console.log("Funca");
+  cachedStorage = WebStorage.supported();
+
 });
 
 /**
@@ -192,14 +192,14 @@ storage.WebStorage.prototype.flush = function() {
  * Appends CACHE_PREFIX so lscache will partition data in to different buckets.
  * @param {string} bucket
  */
-storage.Storage.prototype.setBucket = function(bucket) {
+storage.WebStorage.prototype.setBucket = function(bucket) {
   storage.cacheBucket = bucket;
 }
 
 /**
  * Resets the string being appended to CACHE_PREFIX so lscache will use the default storage behavior.
  */
-storage.Storage.prototype.resetBucket = function() {
+storage.WebStorage.prototype.resetBucket = function() {
   storage.cacheBucket = '';
 }
 
