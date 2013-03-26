@@ -25,6 +25,7 @@ WebStorage.set(key, value, time);
 ```
 #### get
 Retrieves specified value from localStorage, if not expired.
+##### Arguments
 1. `key` (**string**)
 
 ```js
@@ -33,6 +34,7 @@ WebStorage.get(key);
 
 #### remove
 Removes a value from localStorage.
+##### Arguments
 1. `key` (**string**)
 
 ```js
@@ -55,6 +57,7 @@ WebStorage.flush();
 
 #### setBucket
 Appends CACHE_PREFIX so WebStorage will partition data in to different buckets
+##### Arguments
 1. `bucketName` (**string**)
 
 ```js
