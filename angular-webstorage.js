@@ -6,9 +6,9 @@ storage.constant('cacheSuffix', '-cacheexpiration');
 // expiration date radix (set to Base-36 for most space savings)
 storage.constant('expiryRadix', 10);
 // time resolution in minutes
-storage.constant('expiryUnits', 60 * 1000);
+storage.constant('expiryUnits', 60000);
 // ECMAScript max Date (epoch + 1e8 days)
-storage.constant('maxDate', Math.floor(8.64e15/(60 * 1000)));
+storage.constant('maxDate', Math.floor(8.64e15/60000));
 storage.value('scopes', []);
 storage.value('cachedStorage', undefined);
 storage.value('cacheBucket', "");
@@ -16,9 +16,9 @@ storage.value('cachedJSON', "");
 
 //storage.value('cachedStorage', undefined);
 storage.run(function(WebStorage, scopes, cachedStorage){
-	// Example call for run method, maybe I can clean the store here o load it.
-	if (cachedStorage = WebStorage.supported())
-		console.log("Funca");
+  // Example call for run method, maybe I can clean the store here o load it.
+  if (cachedStorage = WebStorage.supported())
+    console.log("Funca");
 });
 
 /**
@@ -30,11 +30,11 @@ storage.run(function(WebStorage, scopes, cachedStorage){
  */
 
 storage.WebStorage = function($rootScope, $q, $log){
-	this.scope = $rootScope;
-	this.log = $log;
-	this.q = $q;
-	this.loaded = this.q.defer();
-	this.ready = this.loaded.promise;
+  this.scope = $rootScope;
+  this.log = $log;
+  this.q = $q;
+  this.loaded = this.q.defer();
+  this.ready = this.loaded.promise;
 };
 
 storage.service('WebStorage', storage.WebStorage);
@@ -47,8 +47,8 @@ storage.service('WebStorage', storage.WebStorage);
 //  */
 storage.WebStorage.prototype.set = function(key, value, time) {
   if (!supportsStorage()) {
-  	console.log("not supported");
-  	return;
+    console.log("not supported");
+    return;
   }
   // If we don't get a string value, try to stringify
   // In future, localStorage may properly support storing non-strings
@@ -159,7 +159,7 @@ storage.WebStorage.prototype.get = function(key) {
  * Equivalent to 'delete' in memcache, but that's a keyword in JS.
  * @param {string} key
  */
-storage.Storage.prototype.remove = function(key) {
+storage.WebStorage.prototype.remove = function(key) {
   if (!supportsStorage()) return null;
   removeItem(key);
   removeItem(expirationKey(key));
@@ -177,7 +177,7 @@ storage.WebStorage.prototype.supported = function() {
 /**
  * Flushes all lscache items and expiry markers without affecting rest of localStorage
  */
-storage.Storage.prototype.flush = function() {
+storage.WebStorage.prototype.flush = function() {
   if (!supportsStorage()) return;
   // Loop in reverse as removing items will change indices of tail
   for (var i = localStorage.length-1; i >= 0 ; --i) {
@@ -212,7 +212,7 @@ storage.Storage.prototype.resetBucket = function() {
 // It's not run at parse-time as it takes 200ms in Android.
 
 function supportsStorage(){
-	var key = '__storagetest__';
+  var key = '__storagetest__';
   var value = key;
   if (storage.cachedStorage !== undefined) {
     return storage.cachedStorage;

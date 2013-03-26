@@ -1,7 +1,7 @@
 angular-webstorage
 ==================
 
-WebStorage AngularJS module to work with browsers localStorage and sessionStorage.
+WebStorage AngularJS module to work with localStorage and sessionStorage based persistence. Data is saved as string if the values is a String object or parsed to JSON if it's an object.
 
 This module is based on [lscache](http://github.com/pamelafox/lscache) (A localStorage-based memcache-inspired client-side caching library. ).
 
