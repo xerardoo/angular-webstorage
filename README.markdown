@@ -5,6 +5,12 @@ WebStorage AngularJS module to work with localStorage and sessionStorage based p
 
 This module is based on [lscache](http://github.com/pamelafox/lscache) (A localStorage-based memcache-inspired client-side caching library. ).
 
+
+NOTE:
+---- 
+The original idea is to build an adapter to replace $resource and check if the data is in localStorage before use $http, if the data is not there it should call it.
+
+
 Usage
 -----
  1. You need to include the 'webstorage' in your app.

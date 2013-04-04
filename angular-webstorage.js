@@ -74,7 +74,9 @@ storage.factory('WStorage', function(cachedStorage, cachePrefix, cacheBucket, ca
     this.removeItem = function(key) {
       localStorage.removeItem(this.cachePrefix + this.cacheBucket + key);
     }
-
+    this.cleanStorage = function(){
+      localStorage.clear();
+    }
   };
 });
 
@@ -283,4 +285,12 @@ storage.WebStorage.prototype.setBucket = function(bucket) {
  */
 storage.WebStorage.prototype.resetBucket = function() {
   iWStorage.setCacheBucket('');
+}
+/**
+ * Resets all the localStorage.
+ */
+storage.WebStorage.prototype.cleanStorage = function() {
+  // console.log("iWStorage.cleanStorage()",iWStorage.cleanStorage());
+  console.log("iWStorage.cleanStorage()");
+  iWStorage.cleanStorage();
 }
