@@ -118,8 +118,8 @@ storage.service('WebStorage', ['$rootScope', '$q', '$log', function($rootScope, 
   this.scope = $rootScope;
   this.log = $log;
   this.q = $q;
-  this.loaded = me.q.defer();
-  this.ready = me.loaded.promise;
+  this.loaded = this.q.defer();
+  this.ready = this.loaded.promise;
   /**
    * Stores the value in localStorage. Expires after specified number of minutes.
    * @param {string} key
