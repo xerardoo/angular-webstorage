@@ -1,6 +1,6 @@
 var storage = angular.module('webstorage', []);
 
-storage.factory('WStorage', function(cachedStorage, cachePrefix, cacheBucket, cachedJSON) {
+storage.factory('WStorage', ['cachedStorage', 'cachePrefix', 'cacheBucket', 'cachedJSON', function(cachedStorage, cachePrefix, cacheBucket, cachedJSON) {
   return function(iCachedStorage, iCachePrefix, iCacheBucket, iCachedJSON) {
     this.cachedStorage  = iCachedStorage;
     this.cachePrefix    = iCachePrefix;
@@ -15,13 +15,13 @@ storage.factory('WStorage', function(cachedStorage, cachePrefix, cacheBucket, ca
     this.getCacheBucket = function(){
       return this.cacheBucket;
     }
-    /** 
+    /**
      * Determines if localStorage is supported in the browser;
      * result is cached for better performance instead of being run each time.
      * Feature detection is based on how Modernizr does it;
      * it's not straightforward due to FF4 issues.
      * It's not run at parse-time as it takes 200ms in Android.
-     */ 
+     */
     this.supportsStorage = function(){
       var key = '__storagetest__';
       var value = key;
@@ -78,10 +78,10 @@ storage.factory('WStorage', function(cachedStorage, cachePrefix, cacheBucket, ca
       localStorage.clear();
     }
   };
-});
+}]);
 
 // Prefix for all cache keys
-storage.constant('cachePrefix', 'angular-web-storage-');
+storage.constant('cachePrefix', 'angular-webstorage-');
 // Suffix for the key name on the expiration items in localStorage
 storage.constant('cacheSuffix', '-cacheexpiration');
 // expiration date radix (set to Base-36 for most space savings)
@@ -97,15 +97,15 @@ storage.value('cachedJSON', undefined);
 storage.value('iWStorage', undefined);
 
 //storage.value('cachedStorage', undefined);
-storage.run(function(WebStorage, scopes, cachedStorage, cachePrefix, cacheBucket, cachedJSON, WStorage){
+storage.run(['WebStorage', 'scopes', 'cachedStorage', 'cachePrefix', 'cacheBucket', 'cachedJSON', 'WStorage', function(WebStorage, scopes, cachedStorage, cachePrefix, cacheBucket, cachedJSON, WStorage){
   //Factory
-  iWStorage = new WStorage(cachedStorage, cachePrefix, cacheBucket, cachedJSON); 
+  iWStorage = new WStorage(cachedStorage, cachePrefix, cacheBucket, cachedJSON);
   //service call
-  if (WebStorage.supported())
-    WebStorage.log.log("WebStorage supported")
-  else
-    WebStorage.log.log("WebStorage not supported")
-});
+  //if (WebStorage.supported())
+  //  WebStorage.log.log("WebStorage supported")
+  //else
+  //  WebStorage.log.log("WebStorage not supported")
+}]);
 
 /**
  * Storage Service
@@ -114,183 +114,172 @@ storage.run(function(WebStorage, scopes, cachedStorage, cachePrefix, cacheBucket
  * @param (angular.log) $log The Angular logging service.
  * @constructor
  */
-
-storage.WebStorage = function($rootScope, $q, $log){
+storage.service('WebStorage', ['$rootScope', '$q', '$log', function($rootScope, $q, $log){
   this.scope = $rootScope;
   this.log = $log;
   this.q = $q;
-  this.loaded = this.q.defer();
-  this.ready = this.loaded.promise;
-};
+  this.loaded = me.q.defer();
+  this.ready = me.loaded.promise;
+  /**
+   * Stores the value in localStorage. Expires after specified number of minutes.
+   * @param {string} key
+   * @param {Object|string} value
+   * @param {number} time
+   */
+  this.set = function(key, value, time) {
+    if (!iWStorage.supportsStorage()) return;
+    // If we don't get a string value, try to stringify
+    // In future, localStorage may properly support storing non-strings
+    // and this can be removed.
 
-storage.service('WebStorage', storage.WebStorage);
-
-/**
- * Stores the value in localStorage. Expires after specified number of minutes.
- * @param {string} key
- * @param {Object|string} value
- * @param {number} time
- */
-storage.WebStorage.prototype.set = function(key, value, time) {
-  if (!iWStorage.supportsStorage()) return;
-  // If we don't get a string value, try to stringify
-  // In future, localStorage may properly support storing non-strings
-  // and this can be removed.
-  
-  if (typeof value !== 'string') {
-    if (!iWStorage.supportsJSON()) return;
-    try {
-      value = JSON.stringify(value);
-    } catch (e) {
-      // Sometimes we can't stringify due to circular refs
-      // in complex objects, so we won't bother storing then.
-      return;
-    }
-  }
-  try {
-    iWStorage.setItem(key, value);
-  } catch (e) {
-    if (e.name === 'QUOTA_EXCEEDED_ERR' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-      // If we exceeded the quota, then we will sort
-      // by the expire time, and then remove the N oldest
-      var storedKeys = [];
-      var storedKey;
-      for (var i = 0; i < localStorage.length; i++) {
-        storedKey = localStorage.key(i);
-        if (storedKey.indexOf(cachePrefix + cacheBucket) === 0 && storedKey.indexOf(cacheSuffix) < 0) {
-          var mainKey = storedKey.substr((cachePrefix + cacheBucket).length);
-          var exprKey = expirationKey(mainKey, storage.cacheSuffix);
-          var expiration = iWStorage.getItem(exprKey);
-          if (expiration) {
-            expiration = parseInt(expiration);
-          } else {
-            // TODO: Store date added for non-expiring items for smarter removal
-            expiration = MAX_DATE;
-          }
-          storedKeys.push({
-            key: mainKey,
-            size: (iWStorage.getItem(mainKey)||'').length,
-            expiration: expiration
-          });
-        }
-      }
-      // Sorts the keys with oldest expiration time last
-      storedKeys.sort(function(a, b) { return (b.expiration-a.expiration); });
-      var targetSize = (value||'').length;
-      while (storedKeys.length && targetSize > 0) {
-        storedKey = storedKeys.pop();
-        iWStorage.removeItem(storedKey.key);
-        iWStorage.removeItem(expirationKey(storedKey.key));
-        targetSize -= storedKey.size;
-      }
+    if (typeof value !== 'string') {
+      if (!iWStorage.supportsJSON()) return;
       try {
-        iWStorage.setItem(key, value);
+        value = JSON.stringify(value);
       } catch (e) {
-        // value may be larger than total quota
+        // Sometimes we can't stringify due to circular refs
+        // in complex objects, so we won't bother storing then.
         return;
       }
+    }
+    try {
+      iWStorage.setItem(key, value);
+    } catch (e) {
+      if (e.name === 'QUOTA_EXCEEDED_ERR' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        // If we exceeded the quota, then we will sort
+        // by the expire time, and then remove the N oldest
+        var storedKeys = [];
+        var storedKey;
+        for (var i = 0; i < localStorage.length; i++) {
+          storedKey = localStorage.key(i);
+          if (storedKey.indexOf(cachePrefix + cacheBucket) === 0 && storedKey.indexOf(cacheSuffix) < 0) {
+            var mainKey = storedKey.substr((cachePrefix + cacheBucket).length);
+            var exprKey = expirationKey(mainKey, storage.cacheSuffix);
+            var expiration = iWStorage.getItem(exprKey);
+            if (expiration) {
+              expiration = parseInt(expiration);
+            } else {
+              // TODO: Store date added for non-expiring items for smarter removal
+              expiration = MAX_DATE;
+            }
+            storedKeys.push({
+              key: mainKey,
+              size: (iWStorage.getItem(mainKey)||'').length,
+              expiration: expiration
+            });
+          }
+        }
+        // Sorts the keys with oldest expiration time last
+        storedKeys.sort(function(a, b) { return (b.expiration-a.expiration); });
+        var targetSize = (value||'').length;
+        while (storedKeys.length && targetSize > 0) {
+          storedKey = storedKeys.pop();
+          iWStorage.removeItem(storedKey.key);
+          iWStorage.removeItem(expirationKey(storedKey.key));
+          targetSize -= storedKey.size;
+        }
+        try {
+          iWStorage.setItem(key, value);
+        } catch (e) {
+          // value may be larger than total quota
+          return;
+        }
+      } else {
+        // If it was some other error, just give up.
+        return;
+      }
+    }
+    // If a time is specified, store expiration info in localStorage
+    if (time) {
+      iWStorage.setItem(expirationKey(key), (iWStorage.currentTime() + time).toString(expiryRadix));
     } else {
-      // If it was some other error, just give up.
-      return;
+      // In case they previously set a time, remove that info from localStorage.
+      iWStorage.removeItem(iWStorage.expirationKey(key));
     }
   }
-  // If a time is specified, store expiration info in localStorage
-  if (time) {
-    iWStorage.setItem(expirationKey(key), (iWStorage.currentTime() + time).toString(expiryRadix));
-  } else {
-    // In case they previously set a time, remove that info from localStorage.
+  /**
+   * Retrieves specified value from localStorage, if not expired.
+   * @param {string} key
+   * @return {string|Object}
+   */
+  this.get = function(key) {
+    if (!iWStorage.supportsStorage()) return null;
+    // Return the de-serialized item if not expired
+    var exprKey = iWStorage.expirationKey(key);
+    var expr = iWStorage.getItem(exprKey);
+    if (expr) {
+      var expirationTime = parseInt(expr);
+
+      // Check if we should actually kick item out of storage
+      if (iWStorage.currentTime() >= expirationTime) {
+        iWStorage.removeItem(key);
+        iWStorage.removeItem(exprKey);
+        return null;
+      }
+    }
+    // Tries to de-serialize stored value if its an object, and returns the normal value otherwise.
+    var value = iWStorage.getItem(key);
+    if (!value || !iWStorage.supportsJSON()) {
+      return value;
+    }
+    try {
+      // We can't tell if its JSON or a string, so we try to parse
+      return JSON.parse(value);
+    } catch (e) {
+      // If we can't parse, it's probably because it isn't an object
+      return value;
+    }
+  }
+  /**
+   * Removes a value from localStorage.
+   * Equivalent to 'delete' in memcache, but that's a keyword in JS.
+   * @param {string} key
+   */
+  this.remove = function(key) {
+    if (!iWStorage.supportsStorage()) return null;
+    iWStorage.removeItem(key);
     iWStorage.removeItem(iWStorage.expirationKey(key));
   }
-}
-
-/**
- * Retrieves specified value from localStorage, if not expired.
- * @param {string} key
- * @return {string|Object}
- */
-storage.WebStorage.prototype.get = function(key) {
-  if (!iWStorage.supportsStorage()) return null;
-  // Return the de-serialized item if not expired
-  var exprKey = iWStorage.expirationKey(key);
-  var expr = iWStorage.getItem(exprKey);
-  if (expr) {
-    var expirationTime = parseInt(expr);
-
-    // Check if we should actually kick item out of storage
-    if (iWStorage.currentTime() >= expirationTime) {
-      iWStorage.removeItem(key);
-      iWStorage.removeItem(exprKey);
-      return null;
+  /**
+   * Returns whether local storage is supported.
+   * Currently exposed for testing purposes.
+   * @return {boolean}
+   */
+  this.supported = function() {
+    return iWStorage.supportsStorage();
+  }
+  /**
+   * Flushes all lscache items and expiry markers without affecting rest of localStorage
+   */
+  this.flush = function() {
+    if (!iWStorage.supportsStorage()) return;
+    // Loop in reverse as removing items will change indices of tail
+    for (var i = localStorage.length-1; i >= 0 ; --i) {
+      var key = localStorage.key(i);
+      if (key.indexOf(iWStorage.getCachePrefix() + iWStorage.getCacheBucket()) === 0) {
+        iWStorage.removeItem(key);
+      }
     }
   }
-  // Tries to de-serialize stored value if its an object, and returns the normal value otherwise.
-  var value = iWStorage.getItem(key);
-  if (!value || !iWStorage.supportsJSON()) {
-    return value;
+  /**
+   * Appends CACHE_PREFIX so lscache will partition data in to different buckets.
+   * @param {string} bucket
+   */
+  this.setBucket = function(bucket) {
+    iWStorage.setCacheBucket(bucket);
   }
-  try {
-    // We can't tell if its JSON or a string, so we try to parse
-    return JSON.parse(value);
-  } catch (e) {
-    // If we can't parse, it's probably because it isn't an object
-    return value;
+  /**
+   * Resets the string being appended to CACHE_PREFIX so lscache will use the default storage behavior.
+   */
+  this.resetBucket = function() {
+    iWStorage.setCacheBucket('');
   }
-}
-
-
-/**
- * Removes a value from localStorage.
- * Equivalent to 'delete' in memcache, but that's a keyword in JS.
- * @param {string} key
- */
-storage.WebStorage.prototype.remove = function(key) {
-  if (!iWStorage.supportsStorage()) return null;
-  iWStorage.removeItem(key);
-  iWStorage.removeItem(iWStorage.expirationKey(key));
-}
-
-/**
- * Returns whether local storage is supported.
- * Currently exposed for testing purposes.
- * @return {boolean}
- */
-storage.WebStorage.prototype.supported = function() {
-  return iWStorage.supportsStorage();
-}
-
-/**
- * Flushes all lscache items and expiry markers without affecting rest of localStorage
- */
-storage.WebStorage.prototype.flush = function() {
-  if (!iWStorage.supportsStorage()) return;
-  // Loop in reverse as removing items will change indices of tail
-  for (var i = localStorage.length-1; i >= 0 ; --i) {
-    var key = localStorage.key(i);
-    if (key.indexOf(iWStorage.getCachePrefix() + iWStorage.getCacheBucket()) === 0) {
-      iWStorage.removeItem(key);
-    }
+  /**
+   * Resets all the localStorage.
+   */
+  this.cleanStorage = function() {
+    // console.log("iWStorage.cleanStorage()",iWStorage.cleanStorage());
+    console.log("iWStorage.cleanStorage()");
+    iWStorage.cleanStorage();
   }
-}
-
-/**
- * Appends CACHE_PREFIX so lscache will partition data in to different buckets.
- * @param {string} bucket
- */
-storage.WebStorage.prototype.setBucket = function(bucket) {
-  iWStorage.setCacheBucket(bucket);
-}
-
-/**
- * Resets the string being appended to CACHE_PREFIX so lscache will use the default storage behavior.
- */
-storage.WebStorage.prototype.resetBucket = function() {
-  iWStorage.setCacheBucket('');
-}
-/**
- * Resets all the localStorage.
- */
-storage.WebStorage.prototype.cleanStorage = function() {
-  // console.log("iWStorage.cleanStorage()",iWStorage.cleanStorage());
-  console.log("iWStorage.cleanStorage()");
-  iWStorage.cleanStorage();
-}
+}]);
